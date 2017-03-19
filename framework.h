@@ -21,6 +21,8 @@
 # define INVERSE write(1, "\x1b[7m", 4)
 # define BOLD write(1, "\x1b[1m", 4);
 
+# define BUFF_SIZE 100
+
 void				test(_Bool last, char const *name,
 									int (*test)(void), char *output);
 

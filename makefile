@@ -4,21 +4,24 @@ SRCS = framework.c
 
 OBJS = $(SRCS:.c=.o)
 
-LIBFT = libft/libft.a
+LIBFTPRINTF = ft_printf/libftprintf.a
 
-HEADERS = -I . -I libft
+HEADERS = -I . -I ./ft_printf -I ./ft_printf/libft
 
 CFLAGS = -Wall -Wextra -Werror
 
 all: $(NAME)
 
-$(NAME): $(OBJS) ./libft/libft.a
-	cp ./libft/libft.a $@
+$(NAME): $(OBJS) $(LIBFTPRINTF)
+	cp $(LIBFTPRINTF) $@
 	ar -rc $@ $(OBJS)
 	ranlib $@
 
-$(LIBFT): libft/
-	cd libft && $(MAKE)
+$(LIBFTPRINTF): force
+	cd ft_printf && $(MAKE)
+
+force:
+	@true
 
 %.o: %.c
 	gcc $(CFLAGS) $(HEADERS) -c -o $@ $<
@@ -30,4 +33,4 @@ fclean: clean
 	rm -f $(NAME)
 re: fclean all
 
-.PHONY: clean fclean re
+.PHONY: clean fclean re all

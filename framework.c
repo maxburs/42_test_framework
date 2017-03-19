@@ -4,8 +4,15 @@
 #include <signal.h>
 #include <framework.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
+#include <string.h> //NULL
+#include <stdbool.h>
+#include <ft_printf.h>  //my printf library
+
+//need these three for open
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 static void		handle_signal(int status)
 {
@@ -42,7 +49,7 @@ static void		handle_exit(int *failed, int status)
 		ft_putstr("KO");
 		*failed = *failed + 1;
 	}
-	else
+	else if (status != 0)
 	{
 		ft_putstr("unknown function result with code: ");
 		ft_putnbr(status);
@@ -59,22 +66,48 @@ void			print_result(int total, int failed)
 	ft_putstr(" tests passed\n");
 }
 
-void				test(_Bool last, char const *name,
-									int (*test)(void), char *output)
+char			*read_all(int fd)
+{
+	char	buff[BUFF_SIZE + 1];
+	int		ret;
+	t_lstr	*str;
+
+	str = NULL;
+	while ((ret = read(fd, &buff, BUFF_SIZE)))
+	{
+		buff[ret] = '\0';
+		ft_lstr_add(&str, strdup(buff), false);
+	}
+	return (ft_lstr_finish(&str));
+}
+
+char			*get_file_contents(char *file)
+{
+	int		fd;
+
+	if (!file)
+		return (NULL);
+	if ((fd = open(file, O_RDONLY)) == -1)
+		return (NULL);
+	return (read_all(fd));
+}
+
+void			test(_Bool last, char const *name,
+									int (*test)(void), char *target_output)
 {
 	static int	total;
 	static int	failed;
 	int		status;
 	pid_t	f;
 	int		pipefd[2];
+	char	*output;
 
-	char	buff[1024];
-	int		ret;
 
 	total++;
-	ft_putstr(" > ");
-	ft_putstr(name);
-	ft_putstr(": ");
+	target_output = get_file_contents(target_output);
+	if (target_output == NULL)
+		target_output = "\0";
+	ft_printf(" > %s:", name);
 
 	pipe(pipefd);
 	f = fork();
@@ -91,6 +124,7 @@ void				test(_Bool last, char const *name,
 	}
 	close(pipefd[1]);
 	wait(&status);
+	output = read_all(pipefd[0]);
 	if (WIFSIGNALED(status))
 		handle_signal(WTERMSIG(status));
 	else if (WIFEXITED(status))
@@ -98,9 +132,11 @@ void				test(_Bool last, char const *name,
 	else
 		ft_putstr("unknown wait result");
 	ft_putchar('\n');
-	if (output == NULL)
+	if (strcmp(target_output, output) != 0)
 	{
-		ft_putstr("output found when null goes here\n");
+		ft_putstr("output mismatch:\n");
+		ft_printf("actual output:\n->%s<-\n", output);
+		ft_printf("target output:\n->%s<-\n", target_output);
 	}
 	if (last)
 	{
@@ -108,8 +144,5 @@ void				test(_Bool last, char const *name,
 		total = 0;
 		failed = 0;
 	}
-	ret = read(pipefd[0], &buff, 1023);
-	buff[ret] = '\0';
-	printf("result:\n%s\n", buff);
 	close(pipefd[0]);
 }
